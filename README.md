@@ -6,7 +6,7 @@ See the [godoc][] for full documentation.
 
 ## License
 
-The [BSD 3-clause][bs] license, see LICENSE file.
+The [BSD 3-clause][bsd] license, see LICENSE file.
 
 [bsd]: http://opensource.org/licenses/BSD-3-Clause
 [godoc]: http://godoc.org/github.com/PuerkitoBio/httpparms
