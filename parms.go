@@ -1,3 +1,17 @@
+// Package httpparms provides helper functions and mechanisms to load the
+// content of an HTTP request into a Go struct. It supports loading the
+// query string parameters, the form-encoded body and/or the JSON-encoded
+// body. If the struct implements the `Validator` interface, it also
+// validates the values.
+//
+// It uses the github.com/gorilla/schema package to load form values
+// in a struct.
+//
+// To use non-default struct field names for form values, use the `schema:"name"`
+// struct tag as documented in the gorilla/schema package. To use non-
+// default struct field names for JSON values, use the `json:"name"`
+// struct tag as documented in the stdlib's encoding/json package.
+//
 package httpparms
 
 import (
@@ -16,49 +30,13 @@ func init() {
 	formDecoder.IgnoreUnknownKeys(true)
 }
 
-// ParameterError is an error that stores information about the specific
-// parameter that caused the error.
-type ParameterError struct {
-	Parameter string
-	Err       error
-}
-
-// Error returns the error message for the ParameterError.
-func (e ParameterError) Error() string {
-	return e.Err.Error()
-}
-
-// ParameterFromErr returns the parameter name that caused the error
-// if err is a ParameterError, or an empty string otherwise.
-func ParameterFromErr(err error) string {
-	if pe, ok := err.(ParameterError); ok {
-		return pe.Parameter
-	}
-	return ""
-}
-
 // Validator defines the method required for a type to validate itself.
 type Validator interface {
 	Validate() error
 }
 
 func schemaDecode(vals url.Values, dst interface{}) error {
-	err := formDecoder.Decode(dst, vals)
-	if err != nil {
-		// try to grab information about a specific field
-		switch err := err.(type) {
-		case schema.ConversionError:
-			return ParameterError{Parameter: err.Key, Err: err}
-		case schema.MultiError:
-			for _, e := range err {
-				if ce, ok := e.(schema.ConversionError); ok {
-					return ParameterError{Parameter: ce.Key, Err: err}
-				}
-			}
-		}
-		return err
-	}
-	return nil
+	return formDecoder.Decode(dst, vals)
 }
 
 // ParseQueryForm parses the Form parameters of r into dst. The parameters
