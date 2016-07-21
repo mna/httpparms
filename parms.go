@@ -1,3 +1,7 @@
+// Copyright 2016 Martin Angers. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // Package httpparms provides helper functions and mechanisms to load the
 // content of an HTTP request into a Go struct. It supports loading the
 // query string parameters, the form-encoded body and/or the JSON-encoded
