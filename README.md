@@ -4,6 +4,44 @@ Package httpparms provides helper functions and mechanisms to load the content o
 
 See the [godoc][] for full documentation.
 
+## Installation
+
+```
+$ go get github.com/PuerkitoBio/httpsrv
+```
+
+Use `-u` to update, `-t` to install test dependencies.
+
+
+## Example
+
+```
+type parmTest struct {
+	S string
+	I int    `schema:"-"`
+	Q string `schema:"q" json:"q_value"`
+}
+
+func (pt *parmTest) Validate() error {
+    if pt.S == "" {
+        return errors.New("parameter `s` is required")
+    }
+	if pt.I > 2 {
+		return errors.New("parameter `i` is too big")
+	}
+	return nil
+}
+
+func myHandler(w http.ResponseWriter, r *http.Request) {
+    var pt parmTest
+    if err := httpparms.ParseQueryJSON(r, &pt); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+    // process the request with valid parameters...
+}
+```
+
 ## License
 
 The [BSD 3-clause][bsd] license, see LICENSE file.

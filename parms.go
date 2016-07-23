@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package httpparms provides helper functions and mechanisms to load the
+// Package httpparms provides helper functions and types to load the
 // content of an HTTP request into a Go struct. It supports loading the
-// query string parameters, the form-encoded body and/or the JSON-encoded
+// query string parameters, the form-encoded body and the JSON-encoded
 // body. If the struct implements the `Validator` interface, it also
 // validates the values.
 //
 // It uses the github.com/gorilla/schema package to load form values
-// in a struct.
+// into a struct.
 //
 // To use non-default struct field names for form values, use the `schema:"name"`
 // struct tag as documented in the gorilla/schema package. To use non-
