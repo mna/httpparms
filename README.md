@@ -7,7 +7,7 @@ See the [godoc][] for full documentation.
 ## Installation
 
 ```
-$ go get github.com/PuerkitoBio/httpsrv
+$ go get github.com/PuerkitoBio/httpparms
 ```
 
 Use `-u` to update, `-t` to install test dependencies.
