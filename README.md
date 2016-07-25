@@ -31,9 +31,14 @@ func (pt *parmTest) Validate() error {
 	return nil
 }
 
+var parser = &httpparms.Parser{
+    // use github.com/gorilla/schema as form decoder
+    Form: schema.NewDecoder().Decode,
+}
+
 func myHandler(w http.ResponseWriter, r *http.Request) {
     var pt parmTest
-    if err := httpparms.ParseQueryJSON(r, &pt); err != nil {
+    if err := parser.ParseQueryJSON(r, &pt); err != nil {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
