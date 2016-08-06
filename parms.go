@@ -161,6 +161,10 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 //       applies the first 4 steps on each error, cumulating the return values.
 //
 func (p *Parser) ParametersFromErr(err error) []string {
+	if err == nil {
+		return nil
+	}
+
 	if nms := p.parametersFromSingleErr(err, nil); len(nms) > 0 {
 		return nms
 	}

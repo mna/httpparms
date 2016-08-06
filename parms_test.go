@@ -7,6 +7,7 @@ package httpparms
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -75,7 +76,7 @@ func TestParseJSON(t *testing.T) {
 		{`{"i": 9}`, parmTest{I: 9}, true},
 		{`{"s": "X", "i": 1, ":q": "Q"}`, parmTest{I: 1, S: "X", Q: "Q"}, false},
 	}
-	for j, fn := range []func([]byte, interface{}) error{json.Unmarshal, ffjson.Unmarshal} {
+	for j, fn := range []func([]byte, interface{}) error{nil, json.Unmarshal, ffjson.Unmarshal} {
 		for i, c := range cases {
 			var pt parmTest
 			r, err := http.NewRequest("GET", "/a", strings.NewReader(c.body))
@@ -87,5 +88,43 @@ func TestParseJSON(t *testing.T) {
 				t.Logf("%d (%d): unexpected error: %v", i, j, got)
 			}
 		}
+	}
+}
+
+type parmErr struct {
+	parm string
+}
+
+func (e parmErr) Error() string     { return e.parm }
+func (e parmErr) Parameter() string { return e.parm }
+
+type parmsErr struct {
+	parms []string
+}
+
+func (e parmsErr) Error() string        { return strings.Join(e.parms, ",") }
+func (e parmsErr) Parameters() []string { return e.parms }
+
+func TestParametersFromErr(t *testing.T) {
+	fn := func(err error) []string {
+		return []string{"x", "y", "z"}
+	}
+
+	cases := []struct {
+		fn   func(error) []string
+		err  error
+		want []string
+	}{
+		{nil, nil, nil},
+		{nil, io.EOF, nil},
+		{nil, parmErr{"a"}, []string{"a"}},
+		{nil, parmsErr{[]string{"a", "b", "c"}}, []string{"a", "b", "c"}},
+		{fn, nil, nil},
+		{fn, io.EOF, []string{"x", "y", "z"}},
+	}
+	for i, c := range cases {
+		p := &Parser{ParametersExtractor: c.fn}
+		got := p.ParametersFromErr(c.err)
+		assert.Equal(t, c.want, got, "case %d", i)
 	}
 }
