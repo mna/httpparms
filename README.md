@@ -39,6 +39,9 @@ var parser = &httpparms.Parser{
 func myHandler(w http.ResponseWriter, r *http.Request) {
     var pt parmTest
     if err := parser.ParseQueryJSON(r, &pt); err != nil {
+        // Optionally get the parameter names in error with
+        // parms := parser.ParametersFromErr(err)
+        // and use this in the error message.
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }

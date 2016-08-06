@@ -6,7 +6,6 @@ package httpparms
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,6 +14,8 @@ import (
 
 	"github.com/go-playground/form"
 	"github.com/gorilla/schema"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"github.com/pquerna/ffjson/ffjson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,6 +108,11 @@ func (e parmsErr) Parameters() []string { return e.parms }
 
 func TestParametersFromErr(t *testing.T) {
 	fn := func(err error) []string {
+		if _, ok := err.(interface {
+			WrappedErrors() []error
+		}); ok {
+			return nil
+		}
 		return []string{"x", "y", "z"}
 	}
 
@@ -118,9 +124,19 @@ func TestParametersFromErr(t *testing.T) {
 		{nil, nil, nil},
 		{nil, io.EOF, nil},
 		{nil, parmErr{"a"}, []string{"a"}},
-		{nil, parmsErr{[]string{"a", "b", "c"}}, []string{"a", "b", "c"}},
+		{nil, parmsErr{[]string{"a", "c", "b", "a"}}, []string{"a", "b", "c"}},
 		{fn, nil, nil},
 		{fn, io.EOF, []string{"x", "y", "z"}},
+		{fn, parmErr{"a"}, []string{"a"}},                      // fn not called if error implements Parameter
+		{fn, parmsErr{[]string{"a", "b"}}, []string{"a", "b"}}, // fn not called if error implements Parameters
+		{nil, errors.Wrap(io.EOF, "wrapped"), nil},
+		{nil, errors.Wrap(parmErr{"a"}, "wrapped"), []string{"a"}},
+		{nil, errors.Wrap(parmsErr{[]string{"a", "b", "c"}}, "wrapped"), []string{"a", "b", "c"}},
+		{fn, errors.Wrap(io.EOF, "wrapped"), []string{"x", "y", "z"}},
+		{fn, errors.Wrap(parmErr{"a"}, "wrapped"), []string{"a"}},                      // fn not called if error implements Parameter
+		{fn, errors.Wrap(parmsErr{[]string{"a", "b"}}, "wrapped"), []string{"a", "b"}}, // fn not called if error implements Parameters
+		{fn, multierror.Append(parmErr{"a"}, parmsErr{[]string{"a", "b"}}, errors.Wrap(parmErr{"c"}, "wrapped")), []string{"a", "b", "c"}},
+		{fn, multierror.Append(io.EOF, parmErr{"a"}), []string{"a", "x", "y", "z"}},
 	}
 	for i, c := range cases {
 		p := &Parser{ParametersExtractor: c.fn}

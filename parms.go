@@ -28,6 +28,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 )
 
 // FormDecoderAdapter is an adapter for form decoder functions that
@@ -146,7 +147,8 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 
 // ParametersFromErr returns the list of parameter names that triggered
 // the error. This can be used to return a helpful error message to the
-// caller. It tries to extract parameter names in the following order:
+// caller. The parameter names are deduplicated and sorted. It tries
+// to extract parameter names in the following order:
 //
 //     - If the error implements a "Cause() error" method, it calls it and
 //       uses the returned error for the other steps.
@@ -166,7 +168,7 @@ func (p *Parser) ParametersFromErr(err error) []string {
 	}
 
 	if nms := p.parametersFromSingleErr(err, nil); len(nms) > 0 {
-		return nms
+		return dedupeAndSort(nms)
 	}
 	if we, ok := err.(interface {
 		WrappedErrors() []error
@@ -175,9 +177,22 @@ func (p *Parser) ParametersFromErr(err error) []string {
 		for _, e := range we.WrappedErrors() {
 			nms = p.parametersFromSingleErr(e, nms)
 		}
-		return nms
+		return dedupeAndSort(nms)
 	}
 	return nil
+}
+
+func dedupeAndSort(vals []string) []string {
+	set := make(map[string]bool, len(vals))
+	for _, v := range vals {
+		set[v] = true
+	}
+	ret := make([]string, 0, len(set))
+	for k := range set {
+		ret = append(ret, k)
+	}
+	sort.Strings(ret)
+	return ret
 }
 
 func (p *Parser) parametersFromSingleErr(err error, cumul []string) []string {
