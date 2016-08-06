@@ -3,7 +3,7 @@
 echo ">>> golint"
 for dir in $(go list ./... | grep -v /vendor/)
 do
-    golint $dir
+    golint "${dir}"
 done
 echo "<<< golint"
 echo
@@ -11,6 +11,11 @@ echo
 echo ">>> go vet"
 go vet $(go list ./... | grep -v /vendor/)
 echo "<<< go vet"
+echo
+
+echo ">>> gas"
+gas $(find . -name "*.go" | grep -v /vendor/ | grep -v '_test.go$')
+echo "<<< gas"
 echo
 
 # Check for gofmt problems and report if any.
