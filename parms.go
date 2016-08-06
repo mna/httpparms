@@ -62,6 +62,8 @@ type Parser struct {
 	// cases, it can return nil for errors it doesn't know about.
 	// If it is nil, no parameters are extracted.
 	ParametersExtractor func(err error) []string
+
+	_ struct{} // prevent unkeyed literals
 }
 
 // Validator defines the method required for a type to validate itself.
