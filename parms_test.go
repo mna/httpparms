@@ -48,7 +48,7 @@ func TestParseQueryForm(t *testing.T) {
 	dec1 := schema.NewDecoder()
 	dec1.IgnoreUnknownKeys(true)
 	dec2 := form.NewDecoder()
-	for j, fn := range []FormDecoder{dec1.Decode, FormDecoderAdapter(dec2.Decode)} {
+	for j, fn := range []func(interface{}, map[string][]string) error{dec1.Decode, FormDecoderAdapter(dec2.Decode)} {
 		for i, c := range cases {
 			var pt parmTest
 			r, err := http.NewRequest("GET", "/a", nil)
@@ -75,7 +75,7 @@ func TestParseJSON(t *testing.T) {
 		{`{"i": 9}`, parmTest{I: 9}, true},
 		{`{"s": "X", "i": 1, ":q": "Q"}`, parmTest{I: 1, S: "X", Q: "Q"}, false},
 	}
-	for j, fn := range []JSONUnmarshaler{json.Unmarshal, ffjson.Unmarshal} {
+	for j, fn := range []func([]byte, interface{}) error{json.Unmarshal, ffjson.Unmarshal} {
 		for i, c := range cases {
 			var pt parmTest
 			r, err := http.NewRequest("GET", "/a", strings.NewReader(c.body))

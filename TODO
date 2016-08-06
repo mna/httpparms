@@ -1,2 +1,0 @@
-- Add a `parameterError` type and a public `ParameterError(parm, msg string) error` func so that a `Validator` can specify exactly which parameter(s) failed validation, support multi-errors?
-- Add a `MapParameterToError(errs ...error) map[string]string` that maps the invalid parameters to their error, useful as a response to the client, handle multi-errors somehow? `Causer`s too?
