@@ -164,6 +164,9 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 //       implements the "WrappedErrors() []error" method, it calls it and
 //       applies the first 4 steps on each error, cumulating the return values.
 //
+// This last step supports the common "multi-error" errors, as implemented
+// by github.com/hashicorp/go-multierror.
+//
 func (p *Parser) ParametersFromErr(err error) []string {
 	if err == nil {
 		return nil
