@@ -158,14 +158,9 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 //       those values.
 //     - If there are no parameter names found at this point and the error
 //       implements the "WrappedErrors() []error" method, it calls it and
-//       applies the first 3 steps on each error, cumulating the return values.
+//       applies the first 4 steps on each error, cumulating the return values.
 //
 func (p *Parser) ParametersFromErr(err error) []string {
-	if ce, ok := err.(interface {
-		Cause() error
-	}); ok {
-		err = ce.Cause()
-	}
 	if nms := p.parametersFromSingleErr(err, nil); len(nms) > 0 {
 		return nms
 	}
@@ -182,6 +177,11 @@ func (p *Parser) ParametersFromErr(err error) []string {
 }
 
 func (p *Parser) parametersFromSingleErr(err error, cumul []string) []string {
+	if ce, ok := err.(interface {
+		Cause() error
+	}); ok {
+		err = ce.Cause()
+	}
 	if pe, ok := err.(interface {
 		Parameter() string
 	}); ok {
