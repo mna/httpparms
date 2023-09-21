@@ -10,22 +10,21 @@
 //
 // It supports various form decoders and JSON unmarshalers. Common
 // such packages that can be used for forms are:
-//     - github.com/go-playground/form (requires the FormDecoderAdapter)
-//     - github.com/gorilla/schema
+//   - github.com/go-playground/form (requires the FormDecoderAdapter)
+//   - github.com/gorilla/schema
 //
 // Common packages that can be used for JSON are:
-//     - encoding/json in the standard library
-//     - pquerna/ffjson/ffjson
+//   - encoding/json in the standard library
+//   - pquerna/ffjson/ffjson
 //
 // The package also provides support to extract parameter names that failed
 // validation so that a useful error message can be given to the caller.
-//
 package httpparms
 
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -102,7 +101,7 @@ func (p *Parser) ParseQueryForm(r *http.Request, dst interface{}) error {
 // dst. If dst is a Validator, Validate is called and its error returned.
 // The body is parsed as JSON regardless of the content-type of the request.
 func (p *Parser) ParseJSON(r *http.Request, dst interface{}) error {
-	b, err := ioutil.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
@@ -122,7 +121,7 @@ func (p *Parser) ParseJSON(r *http.Request, dst interface{}) error {
 	return nil
 }
 
-// ParseQueryJSON parses the query values and the body of the request as JSON
+// ParseQueryJSON parses the query values, and the body of the request as JSON
 // and stores the values in dst. If dst is a Validator, Validate is called and
 // its error returned. The body is parsed as JSON regardless of the
 // content-type of the request.
@@ -152,21 +151,20 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 // caller. The parameter names are deduplicated and sorted. It tries
 // to extract parameter names in the following order:
 //
-//     - If the error implements a "Cause() error" method, it calls it and
-//       uses the returned error for the other steps.
-//     - If the error implements a "Parameter() string" method, it uses this
-//       value.
-//     - If the error implements a "Parameters() []string" method, it uses
-//       those values.
-//     - If the parser has a non-nil ParametersExtractor, it calls it and uses
-//       those values.
-//     - If there are no parameter names found at this point and the error
-//       implements the "WrappedErrors() []error" method, it calls it and
-//       applies the first 4 steps on each error, cumulating the return values.
+//   - If the error implements a "Cause() error" method, it calls it and
+//     uses the returned error for the other steps.
+//   - If the error implements a "Parameter() string" method, it uses this
+//     value.
+//   - If the error implements a "Parameters() []string" method, it uses
+//     those values.
+//   - If the parser has a non-nil ParametersExtractor, it calls it and uses
+//     those values.
+//   - If there are no parameter names found at this point and the error
+//     implements the "WrappedErrors() []error" method, it calls it and
+//     applies the first 4 steps on each error, cumulating the return values.
 //
 // This last step supports the common "multi-error" errors, as implemented
 // by github.com/hashicorp/go-multierror.
-//
 func (p *Parser) ParametersFromErr(err error) []string {
 	if err == nil {
 		return nil
