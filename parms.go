@@ -151,41 +151,49 @@ func (p *Parser) ParseQuery(r *http.Request, dst interface{}) error {
 // caller. The parameter names are deduplicated and sorted. It tries
 // to extract parameter names in the following order:
 //
-//   - If the error implements a "Cause() error" method, it calls it and
-//     uses the returned error for the other steps.
-//   - If the error implements a "Parameter() string" method, it uses this
-//     value.
-//   - If the error implements a "Parameters() []string" method, it uses
-//     those values.
+//   - If errors.As finds an error that implements a "Parameters() []string"
+//     method, it uses those values.
+//   - If errors.As finds an error that implements a "Parameter() string"
+//     method, it uses this value.
 //   - If the parser has a non-nil ParametersExtractor, it calls it and uses
 //     those values.
-//   - If there are no parameter names found at this point and the error
-//     implements the "WrappedErrors() []error" method, it calls it and
-//     applies the first 4 steps on each error, cumulating the return values.
-//
-// This last step supports the common "multi-error" errors, as implemented
-// by github.com/hashicorp/go-multierror.
 func (p *Parser) ParametersFromErr(err error) []string {
 	if err == nil {
 		return nil
 	}
 
-	if nms := p.parametersFromSingleErr(err, nil); len(nms) > 0 {
-		return dedupeAndSort(nms)
+	var pms parameters
+	if errors.As(err, &pms) {
+		return dedupeAndSort(pms.Parameters())
 	}
-	if we, ok := err.(interface {
-		WrappedErrors() []error
-	}); ok {
-		var nms []string
-		for _, e := range we.WrappedErrors() {
-			nms = p.parametersFromSingleErr(e, nms)
+	var pm parameter
+	if errors.As(err, &pm) {
+		if nm := pm.Parameter(); nm != "" {
+			return []string{nm}
 		}
-		return dedupeAndSort(nms)
+		return nil
+	}
+	if p.ParametersExtractor != nil {
+		return dedupeAndSort(p.ParametersExtractor(err))
 	}
 	return nil
 }
 
+type parameters interface {
+	error
+	Parameters() []string
+}
+
+type parameter interface {
+	error
+	Parameter() string
+}
+
 func dedupeAndSort(vals []string) []string {
+	if len(vals) == 0 {
+		return nil
+	}
+
 	set := make(map[string]bool, len(vals))
 	for _, v := range vals {
 		set[v] = true
@@ -196,35 +204,4 @@ func dedupeAndSort(vals []string) []string {
 	}
 	sort.Strings(ret)
 	return ret
-}
-
-func (p *Parser) parametersFromSingleErr(err error, cumul []string) []string {
-	if ce, ok := err.(interface {
-		Cause() error
-	}); ok {
-		err = ce.Cause()
-	}
-	if pe, ok := err.(interface {
-		Parameter() string
-	}); ok {
-		if nm := pe.Parameter(); nm != "" {
-			cumul = append(cumul, nm)
-		}
-		return cumul
-	}
-	if pe, ok := err.(interface {
-		Parameters() []string
-	}); ok {
-		if nms := pe.Parameters(); len(nms) > 0 {
-			cumul = append(cumul, nms...)
-		}
-		return cumul
-	}
-	if p.ParametersExtractor != nil {
-		if nms := p.ParametersExtractor(err); len(nms) > 0 {
-			cumul = append(cumul, nms...)
-		}
-		return cumul
-	}
-	return cumul
 }

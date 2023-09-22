@@ -6,6 +6,8 @@ package httpparms
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -14,8 +16,6 @@ import (
 
 	"github.com/go-playground/form"
 	"github.com/gorilla/schema"
-	multierror "github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	"github.com/pquerna/ffjson/ffjson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -107,14 +107,7 @@ func (e parmsErr) Error() string        { return strings.Join(e.parms, ",") }
 func (e parmsErr) Parameters() []string { return e.parms }
 
 func TestParametersFromErr(t *testing.T) {
-	fn := func(err error) []string {
-		if _, ok := err.(interface {
-			WrappedErrors() []error
-		}); ok {
-			return nil
-		}
-		return []string{"x", "y", "z"}
-	}
+	fn := func(err error) []string { return []string{"x", "y", "z"} }
 
 	cases := []struct {
 		fn   func(error) []string
@@ -125,22 +118,24 @@ func TestParametersFromErr(t *testing.T) {
 		{nil, io.EOF, nil},
 		{nil, parmErr{"a"}, []string{"a"}},
 		{nil, parmsErr{[]string{"a", "c", "b", "a"}}, []string{"a", "b", "c"}},
+		{nil, parmErr{""}, nil},
+		{nil, parmsErr{[]string{}}, nil},
+		{nil, fmt.Errorf("x: %w", parmErr{"a"}), []string{"a"}},
+		{nil, fmt.Errorf("x: %w", parmsErr{[]string{"a", "c", "b", "a"}}), []string{"a", "b", "c"}},
+		{nil, fmt.Errorf("x: %w %w", io.EOF, parmErr{"a"}), []string{"a"}},
+		{nil, fmt.Errorf("x: %w %w", parmErr{"z"}, parmsErr{[]string{"a", "c", "b", "a"}}), []string{"a", "b", "c"}},
 		{fn, nil, nil},
 		{fn, io.EOF, []string{"x", "y", "z"}},
 		{fn, parmErr{"a"}, []string{"a"}},                      // fn not called if error implements Parameter
 		{fn, parmsErr{[]string{"a", "b"}}, []string{"a", "b"}}, // fn not called if error implements Parameters
-		{nil, errors.Wrap(io.EOF, "wrapped"), nil},
-		{nil, errors.Wrap(parmErr{"a"}, "wrapped"), []string{"a"}},
-		{nil, errors.Wrap(parmsErr{[]string{"a", "b", "c"}}, "wrapped"), []string{"a", "b", "c"}},
-		{fn, errors.Wrap(io.EOF, "wrapped"), []string{"x", "y", "z"}},
-		{fn, errors.Wrap(parmErr{"a"}, "wrapped"), []string{"a"}},                      // fn not called if error implements Parameter
-		{fn, errors.Wrap(parmsErr{[]string{"a", "b"}}, "wrapped"), []string{"a", "b"}}, // fn not called if error implements Parameters
-		{fn, multierror.Append(parmErr{"a"}, parmsErr{[]string{"a", "b"}}, errors.Wrap(parmErr{"c"}, "wrapped")), []string{"a", "b", "c"}},
-		{fn, multierror.Append(io.EOF, parmErr{"a"}), []string{"a", "x", "y", "z"}},
+		{nil, fmt.Errorf("x: %w", io.EOF), nil},
+		{fn, fmt.Errorf("x: %w", io.EOF), []string{"x", "y", "z"}},
 	}
 	for i, c := range cases {
-		p := &Parser{ParametersExtractor: c.fn}
-		got := p.ParametersFromErr(c.err)
-		assert.Equal(t, c.want, got, "case %d", i)
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			p := &Parser{ParametersExtractor: c.fn}
+			got := p.ParametersFromErr(c.err)
+			require.Equal(t, c.want, got, "case %d", i)
+		})
 	}
 }
